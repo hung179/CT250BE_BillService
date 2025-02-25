@@ -238,6 +238,13 @@ export class OrderService {
     if (!order) {
       throw new NotFoundException(`Không tìm thấy hóa đơn với ID: ${idOrder}`);
     }
+    const a = await this.redisService.requestResponse('test1', {
+      data: 'Test',
+    });
+    const b = await this.redisService.requestResponse('test2', {
+      data: 'Test',
+    });
+    console.log(a, b);
     return order;
   }
 
