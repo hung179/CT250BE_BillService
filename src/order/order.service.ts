@@ -227,11 +227,10 @@ export class OrderService {
   // Lấy tất cả hóa đơn theo trạng thái
   async findAll(
     state: number
-  ): Promise<{ success: boolean; data?: HOA_DON[]; error?: any }> {
+  ): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
       const query = state === 0 ? {} : { trangThai_HD: state };
       const data = await this.orderModel.find(query).exec();
-      if (data) throw new NotFoundException('Không tìm thấy đơn hàng');
       return { success: true, data };
     } catch (error) {
       return { success: false, error: error };
@@ -241,10 +240,9 @@ export class OrderService {
   // Lấy một hóa đơn theo ID
   async findOne(
     idOrder: string
-  ): Promise<{ success: boolean; data?: HOA_DON; error?: any }> {
+  ): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
       const order = await this.orderModel.findById(idOrder).exec();
-      if (!order) throw new NotFoundException('Không tim thấy hóa đơn');
       return { success: true, data: order };
     } catch (error) {
       return { success: false, error: error };
@@ -254,10 +252,9 @@ export class OrderService {
   // Lấy tất cả hóa đơn của một người dùng cụ thể
   async findUserOrders(
     idUser: string
-  ): Promise<{ success: boolean; data?: HOA_DON[]; error?: any }> {
+  ): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
       const data = await this.orderModel.find({ idNguoiDung: idUser }).exec();
-      if (!data) throw new NotFoundException('Không tim thấy hóa đơn');
       return { success: true, data };
     } catch (error) {
       return { success: false, error: error };
