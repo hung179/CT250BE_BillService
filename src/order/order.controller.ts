@@ -36,4 +36,10 @@ export class OrderController {
   async getUserOrders(@Payload() idUser: string) {
     return this.orderService.findUserOrders(idUser);
   }
+
+  @MessagePattern('order_test')
+  test(@Payload() data: string) {
+    console.log(data);
+    return 'Hello';
+  }
 }
