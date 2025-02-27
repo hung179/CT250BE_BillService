@@ -17,7 +17,7 @@ export class RedisService {
   async requestResponse<T>(
     channel: string,
     message: any
-  ): Promise<{ success: boolean; data?: T; error?: string }> {
+  ): Promise<{ success: boolean; data?: T; error?: any }> {
     return lastValueFrom(this.redisClient.send(channel, message));
   }
 }

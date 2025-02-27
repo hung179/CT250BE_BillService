@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateHoaDonDto } from './order.dto';
@@ -36,7 +40,7 @@ export class OrderService {
 
   async create(
     dto: CreateHoaDonDto
-  ): Promise<{ success: boolean; data?: HOA_DON; error?: string }> {
+  ): Promise<{ success: boolean; data?: HOA_DON; error?: any }> {
     const { ttSanPham, ttNhanHang, ttMaGiam, ttVanChuyen, idKhachHang } = dto;
 
     let step1Success = false; // Đánh dấu giảm kho sản phẩm thành công
@@ -56,7 +60,6 @@ export class OrderService {
         throw new Error(stockUpdateResult?.error || 'Lý do không xác định');
       }
       step1Success = true;
-      console.log(stockUpdateResult.data);
       // 🔻 Bước 2: Lấy giá khuyến mãi sản phẩm
       const productsResult = await this.redisService.requestResponse(
         'giam_san_pham_khuyen_mai',
@@ -66,7 +69,6 @@ export class OrderService {
         throw new Error(productsResult?.error || 'Lý do không xác định');
       }
       step2Success = true;
-      console.log(productsResult.data);
       const productData = productsResult.data as any;
       const chiTietHoaDon = productData.map((item) => ({
         idSanPham_CTHD: item.idSanPham_CTHD,
@@ -90,7 +92,6 @@ export class OrderService {
         throw new Error(vouchersResult?.error || 'Lý do không xác định');
       }
       step3Success = true;
-      console.log(vouchersResult.data);
       let giamHoaDon = 0,
         giamVanChuyen = 0;
       const vouchers = vouchersResult.data as any;
@@ -155,55 +156,50 @@ export class OrderService {
       } catch (rollbackError) {
         return {
           success: false,
-          error: `Lỗi khi tạo hóa đơn: ${error.message}. Rollback thất bại: ${rollbackError.message}`,
+          error: rollbackError,
         };
       }
-      return { success: false, error: error.message || 'Lỗi khi lưu hóa đơn' };
+      return { success: false, error: error };
     }
   }
 
   async updateState(
     idDonHang: string,
     trangThaiMoi: number
-  ): Promise<{ success: boolean; data?: HOA_DON; error?: string }> {
-    // 🔍 Kiểm tra xem đơn hàng có tồn tại không
-    const donHang = await this.orderModel.findById(idDonHang);
-    if (!donHang) {
-      return { success: false, error: `Không tìm thấy đơn hàng ${idDonHang}.` };
-    }
+  ): Promise<{ success: boolean; data?: HOA_DON; error?: any }> {
+    try {
+      // 🔍 Kiểm tra xem đơn hàng có tồn tại không
+      const donHang = await this.orderModel.findById(idDonHang);
+      if (!donHang) {
+        throw new NotFoundException('Không tìm thấy đơn hàng');
+      }
 
-    if (trangThaiMoi === 6 && donHang.trangThai_HD !== 1) {
-      return {
-        success: false,
-        error: `Không thể hủy đơn hàng ${idDonHang} do đơn hàng đã xác nhận.`,
-      };
-    }
-    // ✅ Cập nhật trạng thái
-    donHang.trangThai_HD = trangThaiMoi;
-    const donHangSaved = await donHang.save();
+      if (trangThaiMoi === 6 && donHang.trangThai_HD !== 1) {
+        throw new InternalServerErrorException('Không thể hủy đơn hàng');
+      }
+      // ✅ Cập nhật trạng thái
+      donHang.trangThai_HD = trangThaiMoi;
+      const donHangSaved = await donHang.save();
 
-    return { success: true, data: donHangSaved };
+      return { success: true, data: donHangSaved };
+    } catch (error) {
+      return { success: false, error: error };
+    }
   }
 
   async confirmCancel(
     idDonHang: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: any }> {
     try {
       // 🔍 Kiểm tra đơn hàng có tồn tại không
       const donHang = await this.orderModel.findById(idDonHang);
       if (!donHang) {
-        return {
-          success: false,
-          error: `Không tìm thấy đơn hàng ${idDonHang}.`,
-        };
+        throw new NotFoundException('Không tim thấy đơn hàng');
       }
 
       // 🔍 Kiểm tra trạng thái, chỉ được hủy nếu đơn hàng chưa hoàn tất
       if (donHang.trangThai_HD !== 6) {
-        return {
-          success: false,
-          error: `Đơn hàng ${idDonHang} không thể hủy do đã được xử lý.`,
-        };
+        throw new InternalServerErrorException('Không thể hủy đơn hàng');
       }
 
       // ✅ Cập nhật trạng thái thành "đã xác nhận hủy"
@@ -224,50 +220,47 @@ export class OrderService {
       await donHang.save();
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error };
     }
   }
 
-  // 🟢 Lấy tất cả hóa đơn theo trạng thái
+  // Lấy tất cả hóa đơn theo trạng thái
   async findAll(
     state: number
-  ): Promise<{ success: boolean; data?: HOA_DON[]; error?: string }> {
+  ): Promise<{ success: boolean; data?: HOA_DON[]; error?: any }> {
     try {
       const query = state === 0 ? {} : { trangThai_HD: state };
       const data = await this.orderModel.find(query).exec();
+      if (data) throw new NotFoundException('Không tìm thấy đơn hàng');
       return { success: true, data };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error };
     }
   }
 
-  // 🔵 Lấy một hóa đơn theo ID
+  // Lấy một hóa đơn theo ID
   async findOne(
     idOrder: string
-  ): Promise<{ success: boolean; data?: HOA_DON; error?: string }> {
+  ): Promise<{ success: boolean; data?: HOA_DON; error?: any }> {
     try {
       const order = await this.orderModel.findById(idOrder).exec();
-      if (!order) {
-        return {
-          success: false,
-          error: `Không tìm thấy hóa đơn với ID: ${idOrder}`,
-        };
-      }
+      if (!order) throw new NotFoundException('Không tim thấy hóa đơn');
       return { success: true, data: order };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error };
     }
   }
 
-  // 🟠 Lấy tất cả hóa đơn của một người dùng cụ thể
+  // Lấy tất cả hóa đơn của một người dùng cụ thể
   async findUserOrders(
     idUser: string
-  ): Promise<{ success: boolean; data?: HOA_DON[]; error?: string }> {
+  ): Promise<{ success: boolean; data?: HOA_DON[]; error?: any }> {
     try {
       const data = await this.orderModel.find({ idNguoiDung: idUser }).exec();
+      if (!data) throw new NotFoundException('Không tim thấy hóa đơn');
       return { success: true, data };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: error };
     }
   }
 }
