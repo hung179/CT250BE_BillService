@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { OrderService } from './order.service';
-import { CreateHoaDonDto } from './order.dto';
+import { CreateDonHangDto } from './order.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller()
@@ -8,13 +8,15 @@ export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @MessagePattern('order_create')
-  async createOrder(@Payload() createHoaDonDto: CreateHoaDonDto) {
-    return await this.orderService.create(createHoaDonDto);
+  async createOrder(@Payload() createDonHangDto: CreateDonHangDto) {
+    return await this.orderService.create(createDonHangDto);
   }
 
   @MessagePattern('order_update')
-  async updateStateOrder(@Payload() idSanPham: string, state: number) {
-    return this.orderService.updateState(idSanPham, state);
+  async updateStateOrder(
+    @Payload() data: { idSanPham: string; state: number }
+  ) {
+    return this.orderService.updateState(data.idSanPham, data.state);
   }
 
   @MessagePattern('order_confirm-cancel')
@@ -23,8 +25,19 @@ export class OrderController {
   }
 
   @MessagePattern('order_find-all')
-  async getAllOrders(@Payload() state: number) {
-    return this.orderService.findAll(state);
+  async getAllOrders(
+    @Payload()
+    payload: {
+      limit: number;
+      page: number;
+      state: number;
+    }
+  ) {
+    return this.orderService.findAll(
+      payload.state,
+      payload.page,
+      payload.limit
+    );
   }
 
   @MessagePattern('order_find-one')
@@ -35,11 +48,5 @@ export class OrderController {
   @MessagePattern('order_find-user-orders')
   async getUserOrders(@Payload() idUser: string) {
     return this.orderService.findUserOrders(idUser);
-  }
-
-  @MessagePattern('order_test')
-  test(@Payload() data: string) {
-    console.log(data);
-    return 'Hello';
   }
 }

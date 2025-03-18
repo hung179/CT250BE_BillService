@@ -5,14 +5,14 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { CreateHoaDonDto } from './order.dto';
-import { HOA_DON, Counter, CounterDocument } from './order.schema';
+import { CreateDonHangDto } from './order.dto';
+import { DON_HANG, Counter, CounterDocument } from './order.schema';
 import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class OrderService {
   constructor(
-    @InjectModel(HOA_DON.name) private orderModel: Model<HOA_DON>,
+    @InjectModel(DON_HANG.name) private orderModel: Model<DON_HANG>,
     @InjectModel(Counter.name)
     private readonly counterModel: Model<CounterDocument>,
     private readonly redisService: RedisService
@@ -38,120 +38,190 @@ export class OrderService {
     return `${letters}${numbers}`;
   }
 
+  // async create(
+  //   dto: CreateDonHangDto
+  // ): Promise<{ success: boolean; data?: DON_HANG; error?: any }> {
+  //   const { ttSanPham, ttNhanHang, ttMaGiam, ttVanChuyen, idKhachHang } = dto;
+
+  //   let step1Success = false; // Đánh dấu giảm kho sản phẩm thành công
+  //   let step2Success = false; // Đánh dấu giảm giá sản phẩm thành công
+  //   let step3Success = false; // Đánh dấu sử dụng mã giảm giá thành công
+  //   let step4Success = false; // Đánh dấu lưu hóa đơn thành công
+
+  //   let DonHang;
+
+  //   try {
+  //     // 🔻 Bước 1: Giảm kho sản phẩm
+  //     const stockUpdateResult = await this.redisService.requestResponse(
+  //       'giam_kho_san_pham',
+  //       { ttSanPham }
+  //     );
+  //     if (!stockUpdateResult?.success) {
+  //       throw new Error(stockUpdateResult?.error || 'Lý do không xác định');
+  //     }
+  //     step1Success = true;
+  //     // 🔻 Bước 2: Lấy giá khuyến mãi sản phẩm
+  //     const productsResult = await this.redisService.requestResponse(
+  //       'giam_san_pham_khuyen_mai',
+  //       { dsSP: stockUpdateResult.data }
+  //     );
+  //     if (!productsResult?.success) {
+  //       throw new Error(productsResult?.error || 'Lý do không xác định');
+  //     }
+  //     step2Success = true;
+  //     const productData = productsResult.data as any;
+  //     const chiTietDonHang = productData.map((item) => ({
+  //       idSanPham_CTDH: item.idSanPham_CTDH,
+  //       idTTBanHang_CTDH: item.idTTBanHang_CTDH,
+  //       soLuong_CTDH: item.soLuong_CTDH,
+  //       giaMua_CTDH: item.giaMua_CTDH,
+  //     }));
+
+  //     const tongTien = productData.reduce(
+  //       (total: number, sp: { giaMua_CTDH: number; soLuong_CTDH: number }) =>
+  //         total + sp.giaMua_CTDH * sp.soLuong_CTDH,
+  //       0
+  //     );
+
+  //     // 🔻 Bước 3: Sử dụng mã giảm giá
+  //     const vouchersResult = await this.redisService.requestResponse(
+  //       'su_dung_ma_giam',
+  //       { idKhachHang, tongTien, dsVoucher: ttMaGiam }
+  //     );
+  //     if (!vouchersResult?.success) {
+  //       throw new Error(vouchersResult?.error || 'Lý do không xác định');
+  //     }
+  //     step3Success = true;
+  //     let giamDonHang = 0,
+  //       giamVanChuyen = 0;
+  //     const vouchers = vouchersResult.data as any;
+  //     vouchers?.forEach((maGiam) => {
+  //       const mucGiam = maGiam.tyLeGiam_MG
+  //         ? Math.min((tongTien * maGiam.tyLeGiam_MG) / 100, maGiam.mucGiam_MG)
+  //         : maGiam.mucGiam_MG;
+  //       if (maGiam.loaiMa_MG === 0) {
+  //         giamDonHang += mucGiam;
+  //       } else if (maGiam.loaiMa_MG === 1) {
+  //         giamVanChuyen += mucGiam;
+  //       }
+  //     });
+
+  //     // 🔻 Bước 4: Lưu hóa đơn vào database
+  //     DonHang = new this.orderModel({
+  //       ma_DH: await this.generateBillCode(),
+  //       tong_DH: tongTien,
+  //       giamDonHang_DH: giamDonHang,
+  //       vanChuyen_DH: ttVanChuyen.giaVanChuyen,
+  //       giamVanChuyen_DH: giamVanChuyen,
+  //       chiTiet: chiTietDonHang,
+  //       ttNhanHang: ttNhanHang,
+  //       dsMaGiam_DH: ttMaGiam,
+  //     });
+
+  //     if (idKhachHang) {
+  //       DonHang.idKhachHang_DH = idKhachHang;
+  //     }
+
+  //     const DonHangSaved = await DonHang.save();
+  //     step4Success = true;
+
+  //     return { success: true, data: DonHangSaved };
+  //   } catch (error) {
+  //     // 🔻 Rollback nếu bất kỳ bước nào thất bại
+  //     try {
+  //       if (step4Success) {
+  //         await this.orderModel.deleteOne({
+  //           ma_DH: DonHang.ma_DH,
+  //         });
+  //       }
+
+  //       if (step3Success) {
+  //         await this.redisService.requestResponse('hoan_ma_giam', {
+  //           idKhachHang,
+  //           dsVoucher: ttMaGiam,
+  //         });
+  //       }
+
+  //       if (step2Success) {
+  //         await this.redisService.requestResponse('hoan_san_pham_khuyen_mai', {
+  //           dsSP: ttSanPham,
+  //         });
+  //       }
+
+  //       if (step1Success) {
+  //         await this.redisService.requestResponse('hoan_kho_san_pham', {
+  //           ttSanPham,
+  //         });
+  //       }
+  //     } catch (rollbackError) {
+  //       return {
+  //         success: false,
+  //         error: rollbackError,
+  //       };
+  //     }
+  //     return { success: false, error: error };
+  //   }
+  // }
+
   async create(
-    dto: CreateHoaDonDto
-  ): Promise<{ success: boolean; data?: HOA_DON; error?: any }> {
-    const { ttSanPham, ttNhanHang, ttMaGiam, ttVanChuyen, idKhachHang } = dto;
+    dto: CreateDonHangDto
+  ): Promise<{ success: boolean; data?: DON_HANG; error?: any }> {
+    const { ttSanPham, ttNhanHang, giaVanChuyen, idKhachHang } = dto;
 
-    let step1Success = false; // Đánh dấu giảm kho sản phẩm thành công
-    let step2Success = false; // Đánh dấu giảm giá sản phẩm thành công
-    let step3Success = false; // Đánh dấu sử dụng mã giảm giá thành công
-    let step4Success = false; // Đánh dấu lưu hóa đơn thành công
+    let step1Success = false;
+    let step2Success = false;
 
-    let hoaDon;
+    let donHang;
 
     try {
-      // 🔻 Bước 1: Giảm kho sản phẩm
-      const stockUpdateResult = await this.redisService.requestResponse(
-        'giam_kho_san_pham',
-        { ttSanPham }
-      );
-      if (!stockUpdateResult?.success) {
-        throw new Error(stockUpdateResult?.error || 'Lý do không xác định');
-      }
-      step1Success = true;
-      // 🔻 Bước 2: Lấy giá khuyến mãi sản phẩm
       const productsResult = await this.redisService.requestResponse(
-        'giam_san_pham_khuyen_mai',
-        { dsSP: stockUpdateResult.data }
+        'giam_kho_san_pham',
+        ttSanPham
       );
       if (!productsResult?.success) {
         throw new Error(productsResult?.error || 'Lý do không xác định');
       }
-      step2Success = true;
+      step1Success = true;
+
       const productData = productsResult.data as any;
-      const chiTietHoaDon = productData.map((item) => ({
-        idSanPham_CTHD: item.idSanPham_CTHD,
-        idTTBanHang_CTHD: item.idTTBanHang_CTHD,
-        soLuong_CTHD: item.soLuong_CTHD,
-        giaMua_CTHD: item.giaMua_CTHD,
+
+      const chiTietDonHang = productData.map((item) => ({
+        idSanPham_CTDH: item.idSanPham_CTDH,
+        maSanPham_CTDH: item.maSanPham_CTDH,
+        idTTBanHang_CTDH: item.idTTBanHang_CTDH,
+        tenSanPham_CTDH: item.tenSanPham_CTDH,
+        soLuong_CTDH: item.soLuong_CTDH,
+        giaMua_CTDH: item.giaMua_CTDH,
       }));
 
-      const tongTien = productData.reduce(
-        (total: number, sp: { giaMua_CTHD: number; soLuong_CTHD: number }) =>
-          total + sp.giaMua_CTHD * sp.soLuong_CTHD,
-        0
-      );
-
-      // 🔻 Bước 3: Sử dụng mã giảm giá
-      const vouchersResult = await this.redisService.requestResponse(
-        'su_dung_ma_giam',
-        { idKhachHang, dsVoucher: ttMaGiam }
-      );
-      if (!vouchersResult?.success) {
-        throw new Error(vouchersResult?.error || 'Lý do không xác định');
-      }
-      step3Success = true;
-      let giamHoaDon = 0,
-        giamVanChuyen = 0;
-      const vouchers = vouchersResult.data as any;
-      vouchers?.forEach((maGiam) => {
-        const mucGiam = maGiam.tyLeGiam_MG
-          ? Math.min((tongTien * maGiam.tyLeGiam_MG) / 100, maGiam.mucGiam_MG)
-          : maGiam.mucGiam_MG;
-        if (maGiam.loaiMa_MG === 0) {
-          giamHoaDon += mucGiam;
-        } else if (maGiam.loaiMa_MG === 1) {
-          giamVanChuyen += mucGiam;
-        }
-      });
-
-      // 🔻 Bước 4: Lưu hóa đơn vào database
-      hoaDon = new this.orderModel({
-        ma_HD: await this.generateBillCode(),
-        tong_HD: tongTien,
-        giamHoaDon_HD: giamHoaDon,
-        vanChuyen_HD: ttVanChuyen.giaVanChuyen,
-        giamVanChuyen_HD: giamVanChuyen,
-        chiTietHoaDon: chiTietHoaDon,
-        thongTinNhanHang: ttNhanHang,
-        dsMaGiam_HD: ttMaGiam,
+      donHang = new this.orderModel({
+        ma_DH: await this.generateBillCode(),
+        vanChuyen_DH: giaVanChuyen,
+        chiTiet_DH: chiTietDonHang,
+        ttNhanHang_DH: ttNhanHang,
       });
 
       if (idKhachHang) {
-        hoaDon.idKhachHang_HD = idKhachHang;
+        donHang.idKhachHang_DH = idKhachHang;
       }
 
-      const hoaDonSaved = await hoaDon.save();
-      step4Success = true;
+      const DonHangSaved = await donHang.save();
+      step2Success = true;
 
-      return { success: true, data: hoaDonSaved };
+      return { success: true, data: DonHangSaved };
     } catch (error) {
       // 🔻 Rollback nếu bất kỳ bước nào thất bại
       try {
-        if (step4Success) {
-          await this.orderModel.deleteOne({
-            ma_HD: hoaDon.ma_HD,
-          });
-        }
-
-        if (step3Success) {
-          await this.redisService.requestResponse('hoan_ma_giam', {
-            idKhachHang,
-            dsVoucher: ttMaGiam,
-          });
-        }
-
         if (step2Success) {
-          await this.redisService.requestResponse('hoan_san_pham_khuyen_mai', {
-            dsSP: ttSanPham,
+          await this.orderModel.deleteOne({
+            ma_DH: donHang.ma_DH,
           });
         }
-
         if (step1Success) {
-          await this.redisService.requestResponse('hoan_kho_san_pham', {
-            ttSanPham,
-          });
+          await this.redisService.requestResponse(
+            'hoan_kho_san_pham',
+            ttSanPham
+          );
         }
       } catch (rollbackError) {
         return {
@@ -166,7 +236,7 @@ export class OrderService {
   async updateState(
     idDonHang: string,
     trangThaiMoi: number
-  ): Promise<{ success: boolean; data?: HOA_DON; error?: any }> {
+  ): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
       // 🔍 Kiểm tra xem đơn hàng có tồn tại không
       const donHang = await this.orderModel.findById(idDonHang);
@@ -174,13 +244,12 @@ export class OrderService {
         throw new NotFoundException('Không tìm thấy đơn hàng');
       }
 
-      if (trangThaiMoi === 6 && donHang.trangThai_HD !== 1) {
+      if (trangThaiMoi === 5 && donHang.trangThai_DH > 2) {
         throw new InternalServerErrorException('Không thể hủy đơn hàng');
       }
       // ✅ Cập nhật trạng thái
-      donHang.trangThai_HD = trangThaiMoi;
+      donHang.trangThai_DH = trangThaiMoi;
       const donHangSaved = await donHang.save();
-
       return { success: true, data: donHangSaved };
     } catch (error) {
       return { success: false, error: error };
@@ -198,23 +267,13 @@ export class OrderService {
       }
 
       // 🔍 Kiểm tra trạng thái, chỉ được hủy nếu đơn hàng chưa hoàn tất
-      if (donHang.trangThai_HD !== 6) {
+      if (donHang.trangThai_DH !== 5) {
         throw new InternalServerErrorException('Không thể hủy đơn hàng');
       }
+      donHang.trangThai_DH = 6;
 
-      // ✅ Cập nhật trạng thái thành "đã xác nhận hủy"
-      donHang.trangThai_HD = 7;
-
-      // Xử lý hoàn lại các tài nguyên
-      await this.redisService.requestResponse('hoan_san_pham_khuyen_mai', {
-        dsSP: donHang.chiTietHoaDon,
-      });
-      await this.redisService.requestResponse('hoan_ma_giam', {
-        idKhachHang: donHang.idKhachHang_HD,
-        dsVoucher: donHang.dsMaGiam_HD,
-      });
       await this.redisService.requestResponse('hoan_kho_san_pham', {
-        ttSanPham: donHang.chiTietHoaDon,
+        ttSanPham: donHang.chiTiet_DH,
       });
 
       await donHang.save();
@@ -226,14 +285,25 @@ export class OrderService {
 
   // Lấy tất cả hóa đơn theo trạng thái
   async findAll(
-    state: number
+    state: number,
+    page: number,
+    limit: number
   ): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
-      const query = state === 0 ? {} : { trangThai_HD: state };
-      const data = await this.orderModel.find(query).exec();
-      return { success: true, data };
+      const query = state === 0 ? {} : { trangThai_DH: state };
+
+      // Đếm tổng số đơn hàng phù hợp
+      const total = await this.orderModel.countDocuments(query);
+
+      const data = await this.orderModel
+        .find(query)
+        .skip(limit * page) // Bỏ qua số lượng sản phẩm đã hiển thị
+        .limit(limit) // Giới hạn số lượng sản phẩm trả về
+        .exec();
+
+      return { success: true, data: { orders: data, total: total } };
     } catch (error) {
-      return { success: false, error: error };
+      return { success: false, error };
     }
   }
 

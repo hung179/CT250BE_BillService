@@ -3,19 +3,18 @@ import {
   IsNumber,
   ValidateNested,
   IsOptional,
-  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class TTSanPhamDto {
   @IsString()
-  idSanPham_CTHD: string;
+  idSanPham_CTDH: string;
 
   @IsString()
-  idTTBanHang_CTHD: string;
+  idTTBanHang_CTDH: string;
 
   @IsNumber()
-  soLuong_CTHD: number;
+  soLuong_CTDH: number;
 }
 
 class DiaChiDto {
@@ -41,21 +40,10 @@ class TTNhanHangDto {
 
   @ValidateNested()
   @Type(() => DiaChiDto)
-  diChi_NH: DiaChiDto;
+  diaChi_NH: DiaChiDto;
 }
 
-class TTVanChuyenDto {
-  @IsNumber()
-  giaVanChuyen: number;
-
-  @IsNumber()
-  giaVanChuyenVuotMuc: number;
-
-  @IsNumber()
-  trongluongVuotMuc: number;
-}
-
-export class CreateHoaDonDto {
+export class CreateDonHangDto {
   @IsString()
   @IsOptional()
   idKhachHang: string;
@@ -68,12 +56,6 @@ export class CreateHoaDonDto {
   @Type(() => TTNhanHangDto)
   ttNhanHang: TTNhanHangDto;
 
-  @IsArray()
-  @IsOptional()
-  @IsString({ each: true })
-  ttMaGiam: string[];
-
-  @ValidateNested()
-  @Type(() => TTVanChuyenDto)
-  ttVanChuyen: TTVanChuyenDto;
+  @IsNumber()
+  giaVanChuyen: number;
 }
