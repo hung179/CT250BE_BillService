@@ -324,7 +324,9 @@ export class OrderService {
     idUser: string
   ): Promise<{ success: boolean; data?: any; error?: any }> {
     try {
-      const data = await this.orderModel.find({ idNguoiDung: idUser }).exec();
+      const data = await this.orderModel
+        .find({ idKhachHang_DH: idUser })
+        .exec();
       return { success: true, data };
     } catch (error) {
       return { success: false, error: error };
