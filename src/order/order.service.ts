@@ -271,7 +271,7 @@ export class OrderService {
         throw new InternalServerErrorException('Không thể hủy đơn hàng');
       }
       donHang.trangThai_DH = 6;
-
+      
       await this.redisService.requestResponse('hoan_kho_san_pham', {
         ttSanPham: donHang.chiTiet_DH,
       });

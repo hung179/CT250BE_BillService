@@ -19,6 +19,6 @@ async function bootstrap() {
   await redisMicroservice.listen();
   app.use(morgan('dev'));
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  await app.listen(process.env.PORT ?? 5001);
+  await app.listen(process.env.PORT ?? 4002, '0.0.0.0');
 }
 bootstrap();
